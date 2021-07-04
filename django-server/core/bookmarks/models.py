@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 
 class Tag(models.Model):
     name = models.CharField(unique=True, max_length=255)
@@ -8,7 +8,7 @@ class Url(models.Model):
     url_path = models.URLField(unique=True)
 
 class UserManager(BaseUserManager):
-    def create_user(self, username, email, password):
+    def create_user(self, email, password):
         """
         Creates and saves a User with the given email and password.
         """
@@ -24,34 +24,32 @@ class UserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, username, email, password):
+    def create_superuser(self, email, password):
         """
          Creates and saves a superuser with the given email and password.
         """
-
-        USERNAME_FIELD = 'email'
-
         user = self.create_user(email, password=password)
+        user.is_superuser = True
         user.is_admin = True
-        user.activated=True
-        user.save(using=self._db)
-        return user
-
-    def create_staffuser(self, username, email, password):
-        """
-         Creates and saves a staffuser with the given email and password.
-        """
-        user = self.create_user(email, password=password)
         user.is_staff = True
-        user.activated=True
-        user.save(using=self._db)
+        user.activated = True
+        user.save(using = self._db)
         return user
 
-class User(AbstractUser):
-    username = models.CharField(max_length=250, unique=True)
+    def get_by_natural_key(self, email):
+        return self.get(email=email)
+
+class User(AbstractBaseUser, PermissionsMixin):
     name = models.CharField(max_length=250)
     email = models.CharField(max_length=255, unique=True)
     password = models.CharField(max_length=255)
+    is_staff = models.BooleanField(default=False)
+    is_admin = models.BooleanField(default=False)
+
+    objects = UserManager()
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = []
 
     def __str__(self):
         return self.name
